@@ -4,6 +4,12 @@
  */
 package cinemaTicket;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.UUID;
 import javax.swing.*;
 import javax.swing.table.*;
 
@@ -12,15 +18,20 @@ import javax.swing.table.*;
  * @author Lenovo
  */
 public class cinematTicket extends javax.swing.JFrame {
-    DefaultTableModel model;
+    DefaultTableModel tablemodel;
     boolean isEditing = false;
     int editingRow = -1;
     DefaultTableModel tableModel;
     boolean isEditMode = false;
     int selectedRow = -1;
     int orderCounter = 0;
+ 
+    
+    
     public cinematTicket() {
         initComponents();
+        isiDaftarFilmDariFile();
+        tablemodel = (DefaultTableModel) tabel.getModel();
     }
     private void clearInputs() {
         ComboFilm.setSelectedIndex(0);
@@ -53,7 +64,7 @@ public class cinematTicket extends javax.swing.JFrame {
         jLabel3 = new javax.swing.JLabel();
         ComboSeats = new javax.swing.JComboBox<>();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        tabel = new javax.swing.JTable();
         jLabel2 = new javax.swing.JLabel();
         Quantity = new javax.swing.JTextField();
         jLabel4 = new javax.swing.JLabel();
@@ -120,14 +131,14 @@ public class cinematTicket extends javax.swing.JFrame {
 
         jLabel3.setText("Seats");
 
-        ComboSeats.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        ComboSeats.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Reguler", "Premium" }));
         ComboSeats.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ComboSeatsActionPerformed(evt);
             }
         });
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        tabel.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null, null},
                 {null, null, null, null, null},
@@ -137,8 +148,16 @@ public class cinematTicket extends javax.swing.JFrame {
             new String [] {
                 "Order ID", "Movie", "Showing Time", "Studio", "Quantity"
             }
-        ));
-        jScrollPane1.setViewportView(jTable1);
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane1.setViewportView(tabel);
 
         jLabel2.setText("Quantity");
 
@@ -150,7 +169,7 @@ public class cinematTicket extends javax.swing.JFrame {
 
         jLabel4.setText("Movie");
 
-        ComboFilm.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        ComboFilm.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", " ", " " }));
         ComboFilm.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ComboFilmActionPerformed(evt);
@@ -271,7 +290,7 @@ public class cinematTicket extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 private void formWindowOpened(java.awt.event.WindowEvent evt) {
-        tableModel = (DefaultTableModel) jTable1.getModel();
+        tableModel = (DefaultTableModel) tabel.getModel();
         ComboFilm.setModel(new DefaultComboBoxModel<>(new String[] {
         "Mission: Impossible – The Final Reckoning",
         "Lilo & Stitch",
@@ -299,8 +318,55 @@ private void updateTimeOptions(String movie) {
             break;
     }
 }
+
+private void isiDaftarFilmDariFile() {
+    ComboFilm.removeAllItems();
+    try (BufferedReader reader = new BufferedReader(new FileReader("films.txt"))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            ComboFilm.addItem(line.trim());
+        }
+        if (ComboFilm.getItemCount() > 0) {
+            String firstFilm = (String) ComboFilm.getItemAt(0);
+            updateTimeOptions(firstFilm);
+        }
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "Gagal membaca daftar film: " + e.getMessage());
+    }
+     ComboFilm.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String selectedFilm = (String) ComboFilm.getSelectedItem();
+            updateTimeOptions(selectedFilm);
+        }
+    });
+}
     private void ComboSeatsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ComboSeatsActionPerformed
-        // TODO add your handling code here:
+    ComboSeats.removeAllItems();
+ComboSeats.addItem("Premium");
+ComboSeats.addItem("Reguler");
+
+DefaultTableModel model = (DefaultTableModel) tabel.getModel();
+
+// Ambil data dari form
+String movie = (String) ComboFilm.getSelectedItem();
+String time = (String) ComboTime.getSelectedItem();
+String seatType = (String) ComboSeats.getSelectedItem();
+String qty = Quantity.getText();
+
+// Tentukan studio berdasarkan seat
+String studio = "";
+if (seatType.equals("Premium")) {
+    studio = "Studio B";
+} else if (seatType.equals("Reguler")) {
+    studio = "Studio A";
+}
+
+// Generate order ID (optional)
+String orderId = UUID.randomUUID().toString().substring(0, 8); // contoh ID acak
+
+// Tambahkan ke tabel
+model.addRow(new Object[]{orderId, movie, time, studio, qty});
     }//GEN-LAST:event_ComboSeatsActionPerformed
 
     private void QuantityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_QuantityActionPerformed
@@ -308,17 +374,16 @@ private void updateTimeOptions(String movie) {
     }//GEN-LAST:event_QuantityActionPerformed
 
     private void btnOrderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOrderActionPerformed
-          String movie = (String) ComboFilm.getSelectedItem();
-    String time = (String) ComboTime.getSelectedItem();
-    String seatType = (String) ComboSeats.getSelectedItem();
-    String studio = seatType.equals("Premium") ? "Studio B (Premium)" : "Studio A (Reguler)";
-    String qtyText = Quantity.getText().trim();
+        String movie = (String) ComboFilm.getSelectedItem();
+        String time = (String) ComboTime.getSelectedItem();
+        String seatType = (String) ComboSeats.getSelectedItem();
+        String studio = seatType.equals("Premium") ? "Studio B (Premium)" : "Studio A (Reguler)";
+        String qtyText = Quantity.getText().trim();
 
     if (movie == null || time == null || qtyText.isEmpty()) {
         JOptionPane.showMessageDialog(this, "Mohon lengkapi semua input.");
         return;
     }
-
     int qty;
     try {
         qty = Integer.parseInt(qtyText);
@@ -348,7 +413,7 @@ private void updateTimeOptions(String movie) {
     }//GEN-LAST:event_btnOrderActionPerformed
 
     private void btnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteActionPerformed
-        int row = jTable1.getSelectedRow();
+        int row = tabel.getSelectedRow();
     if (row != -1) {
         tableModel.removeRow(row);
     } else {
@@ -361,28 +426,11 @@ private void updateTimeOptions(String movie) {
     }//GEN-LAST:event_ComboTimeActionPerformed
 
     private void ComboFilmActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ComboFilmActionPerformed
-        String selectedMovie = (String) ComboFilm.getSelectedItem();
-    ComboTime.removeAllItems();
-
-    if (selectedMovie == null) return;
-
-    switch (selectedMovie) {
-        case "Lilo & Stitch":
-            ComboTime.addItem("08:00");
-            ComboTime.addItem("10:00");
-            break;
-        case "Mission: Impossible – The Final Reckoning":
-            ComboTime.addItem("12:00");
-            ComboTime.addItem("15:00");
-            break;
-        case "Final Destination Bloodlines":
-            ComboTime.addItem("18:00");
-            ComboTime.addItem("20:00");
-            break;
+       
     }//GEN-LAST:event_ComboFilmActionPerformed
 
     private void btnEditActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditActionPerformed
-        selectedRow = jTable1.getSelectedRow();
+        selectedRow = tabel.getSelectedRow();
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "Pilih data yang ingin diedit dari tabel.");
         btnEdit.setSelected(false);
@@ -467,6 +515,6 @@ private void updateTimeOptions(String movie) {
     private javax.swing.JPasswordField jPasswordField2;
     private javax.swing.JScrollBar jScrollBar1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
+    private javax.swing.JTable tabel;
     // End of variables declaration//GEN-END:variables
 }
